@@ -27,7 +27,22 @@ Power BI lee el mismo Google Sheets, así que al darle **Actualizar** aparecen l
 2. Clic derecho sobre el archivo → **Abrir con → Hojas de cálculo de Google**.
 3. **Archivo → Guardar como Hojas de cálculo de Google**. A partir de aquí trabaja con *esa* copia (la que tiene el ícono verde, no la `.xlsx`).
 4. **Archivo → Configuración → Zona horaria**: `(GMT-05:00) Bogotá`.
-5. Verifica que existan las 5 hojas con estos nombres exactos: `Fac`, `Dim_Fecha`, `Dim_city`, `Dim_pizza`, `Dim_pizza_types`.
+5. Verifica que existan las 5 hojas con estos nombres exactos: `Fac`, `Dim_Fecha`, `Dim_city`, `Dim_pizza`, `Dim_pizza_types`. Las otras dos (`Dim_state`, `Dim_sales_channel`) las crea el script en el Paso 2.
+
+### Modelo (igual al del profesor)
+
+```
+                Dim_Fecha (sk_date, date, mes, trimestre, semestre, año, dia_semana)
+                    |
+Dim_sales_channel --+-- Fac (order_details_id, order_id, pizza_id, sk_city_id, quantity,
+(sk_sales_channel_id,   |      sk_date, time, sk_sales_channel_id)
+ nombre_canal)          |
+                        +-- Dim_city (sk_city_id, Descripcion, Direccion, sk_state_id) -- Dim_state (sk_state_id, nombre_estado)
+                        |
+                        +-- Dim_pizza (pizza_id, size, price, ...) -- Dim_pizza_types (name, category, ingredients)
+```
+
+Es un modelo estrella con dos ramas **copo de nieve**: `Dim_city → Dim_state` y `Dim_pizza → Dim_pizza_types`.
 
 ## Paso 2 — Backend con Apps Script
 
@@ -38,17 +53,18 @@ Power BI lee el mismo Google Sheets, así que al darle **Actualizar** aparecen l
 5. **Implementar → Nueva implementación** → tipo **Aplicación web**:
    - *Ejecutar como*: **Yo**
    - *Quién tiene acceso*: **Cualquier persona**
-6. Copia la URL que termina en **`/exec`**. Pruébala en el navegador agregando `?action=ping` → debe responder `{"ok":true,...}`.
+6. Selecciona la función `actualizarModelo` y dale **Ejecutar** (una sola vez; repetirla no daña nada). Crea `Dim_state` y `Dim_sales_channel`, agrega `Direccion` y `sk_state_id` a `Dim_city`, `dia_semana` y `dia_semana_num` a `Dim_Fecha`, y `time` y `sk_sales_channel_id` a `Fac`. Las ventas viejas quedan con canal `0 = Sin dato` y sin hora. Las direcciones de las sedes son de ejemplo: se pueden cambiar directamente en la hoja.
+7. Copia la URL que termina en **`/exec`**. Pruébala en el navegador agregando `?action=ping` → debe responder `{"ok":true,...}`.
 
 > Si cambias el código después: **Implementar → Gestionar implementaciones → ✏️ → Versión: Nueva versión**. Así la URL `/exec` no cambia.
 
 ### Qué hace el backend al registrar una venta
 
-1. Valida ciudad, pizzas y cantidades (1 a 50 por ítem, para evitar registros como `quantity = 10000`).
+1. Valida ciudad, canal de venta, pizzas y cantidades (1 a 50 por ítem, para evitar registros como `quantity = 10000`).
 2. Toma un **candado** (`LockService`) para que si dos compañeros registran a la vez no se repitan los IDs.
-3. Busca la fecha en `Dim_Fecha`. Si existe usa su `sk_date`; si no, **crea la fila con una SK nueva** (`max + 1`) y calcula mes, trimestre, semestre y año.
+3. Busca la fecha en `Dim_Fecha`. Si existe usa su `sk_date`; si no, **crea la fila con una SK nueva** (`max + 1`) y calcula mes, trimestre, semestre, año y día de la semana.
 4. Calcula `order_id = max + 1` y `order_details_id = max + 1, +2, …`.
-5. Agrega **una fila en `Fac` por cada pizza** del pedido, con las mismas columnas que ya existen.
+5. Agrega **una fila en `Fac` por cada pizza** del pedido, con `sk_sales_channel_id` (el canal elegido) y `time` (hora del registro, zona Bogotá).
 
 ## Paso 3 — Probar el frontend en tu PC
 
@@ -112,7 +128,7 @@ in
     Hojas
 ```
 
-El parámetro `v` cambia en cada actualización: sin él, Power BI Desktop reutiliza una copia en caché y no ve las ventas nuevas. Cada tabla (`Fac`, `Dim_Fecha`, `Dim_city`, `Dim_pizza`, `Dim_pizza_types`) toma su hoja de `LibroPizza`, promueve encabezados, quita filas vacías y asigna tipos (`price` se lee con cultura `en-US`). Si Power BI pide credenciales para `docs.google.com`, elige **Anónimo**.
+El parámetro `v` cambia en cada actualización: sin él, Power BI Desktop reutiliza una copia en caché y no ve las ventas nuevas. Cada tabla (`Fac`, `Dim_Fecha`, `Dim_city`, `Dim_state`, `Dim_sales_channel`, `Dim_pizza`, `Dim_pizza_types`) toma su hoja de `LibroPizza`, promueve encabezados, quita filas vacías y asigna tipos (`price` se lee con cultura `en-US`). Si Power BI pide credenciales para `docs.google.com`, elige **Anónimo**.
 
 **Opción A · Conector de Google Sheets** (lo más simple en Power BI Desktop)
 1. **Obtener datos → Más… → Google Sheets** → pega la URL del Google Sheets → inicia sesión con tu cuenta de Google.
@@ -138,15 +154,31 @@ El parámetro `v` cambia en cada actualización: sin él, Power BI Desktop reuti
 | `Fac[sk_city_id]` | `Dim_city[sk_city_id]` |
 | `Fac[pizza_id]` | `Dim_pizza[pizza_id]` |
 | `Dim_pizza[pizza_type_id]` | `Dim_pizza_types[pizza_type_id]` |
+| `Fac[sk_sales_channel_id]` | `Dim_sales_channel[sk_sales_channel_id]` |
+| `Dim_city[sk_state_id]` | `Dim_state[sk_state_id]` |
 
-### Medidas DAX sugeridas
+En `Fac`, Power Query convierte `time` a hora y agrega `Hora del día`. `Dim_Fecha[Día semana]` se ordena por `dia_semana_num` (1 = lunes … 7 = domingo).
+
+### Medidas DAX
 
 ```DAX
 Ventas = SUMX ( Fac, Fac[quantity] * RELATED ( Dim_pizza[price] ) )
 Pedidos = DISTINCTCOUNT ( Fac[order_id] )
 Pizzas vendidas = SUM ( Fac[quantity] )
 Ticket promedio = DIVIDE ( [Ventas], [Pedidos] )
+
+-- Solo ventas hechas desde la app (las históricas tienen canal 0 = Sin dato)
+Ventas con canal = CALCULATE ( [Ventas], KEEPFILTERS ( Dim_sales_channel[sk_sales_channel_id] <> 0 ) )
+Pedidos con canal = CALCULATE ( [Pedidos], KEEPFILTERS ( Dim_sales_channel[sk_sales_channel_id] <> 0 ) )
+-- Ventas cuyas filas tienen fecha (la mayoría de las históricas no tienen sk_date)
+Ventas con fecha = CALCULATE ( [Ventas], KEEPFILTERS ( NOT ISBLANK ( Fac[sk_date] ) ) )
 ```
+
+Las tarjetas de la página 1 usan medidas de texto con `FORMAT` (`Total ventas`, `Total pedidos`, …) porque la tarjeta nueva siempre abrevia los números ("21 mil").
+
+### Páginas del tablero
+- **Página 1**: tarjetas, ventas por ciudad, por categoría, pizzas por tamaño, top 10 pizzas y detalle de pedidos.
+- **Canales y estados**: ventas por canal, por estado, por día de la semana, pedidos por hora del día y tabla de pedidos con canal y hora.
 
 ### Ver los datos nuevos
 Registra una venta en el front → en Power BI Desktop clic en **Inicio → Actualizar**.
@@ -163,13 +195,14 @@ En Power BI Service: **Configuración del modelo semántico → Actualización p
 
 **Cómo se usan en este modelo estrella**
 - Cada dimensión tiene su SK como **llave primaria** (`Dim_city.sk_city_id`, `Dim_Fecha.sk_date`, `Dim_pizza.sk_id_pizza`, `Dim_pizza_types.sk_pizza_type_id`).
-- La tabla de hechos `Fac` guarda esas SK como **llaves foráneas** (`Fac.sk_city_id`, `Fac.sk_date`) en lugar de guardar el texto o la fecha.
+- La tabla de hechos `Fac` guarda esas SK como **llaves foráneas** (`Fac.sk_city_id`, `Fac.sk_date`, `Fac.sk_sales_channel_id`) en lugar de guardar el texto o la fecha.
+- Una dimensión también puede apuntar a otra: `Dim_city.sk_state_id` es llave foránea hacia `Dim_state` (eso es el “copo de nieve”).
 
 **¿Por qué usarlas?**
 1. **Rendimiento**: unir por enteros pequeños es más rápido y ocupa menos que unir por textos.
 2. **Independencia del origen**: si el sistema fuente cambia un código (`"hawaiian_m"` → `"haw_m"`), la SK no cambia y el histórico no se rompe.
 3. **Historial (SCD tipo 2)**: si cambia un dato de la dimensión (por ejemplo el precio de una pizza), se puede crear una fila nueva con otra SK y conservar la anterior; las ventas viejas siguen apuntando al precio viejo.
-4. **Miembros especiales**: se puede reservar, por ejemplo, `sk = 0` para “Desconocido / Sin fecha”.
+4. **Miembros especiales**: se reserva una SK para “Desconocido”. En este modelo, `Dim_sales_channel` tiene `sk_sales_channel_id = 0 → Sin dato`, y las 48.631 ventas viejas (que no registraban canal) apuntan a ella. Así ninguna fila de `Fac` queda con la llave vacía.
 
 **Ejemplo en vivo con la app**: cuando registras una venta con una fecha que no existe en `Dim_Fecha`, el backend crea la fila con `sk_date = max + 1` y esa misma SK se escribe en `Fac`. La ventana de confirmación muestra qué SK se usó y si fue nueva o existente.
 
@@ -184,6 +217,6 @@ En Power BI Service: **Configuración del modelo semántico → Actualización p
 | 1 | **48.261 de 48.630 filas de `Fac` no tienen `sk_date`** (vacío). Las primeras 360 tienen `sk_date` = 1, 2, 3… igual al número de fila, no a la fecha real del pedido. | Cualquier gráfico por fecha/mes saldrá casi vacío o en “(En blanco)”. |
 | 2 | En `Dim_Fecha` la misma fecha aparece con varias SK (02/05/2026 tiene 9 SK: 361–369; 04/05/2026 tiene 3). | No rompe la relación, pero no es lo ideal: una fecha = una SK. La app reutiliza la primera que encuentre. |
 | 3 | `order_id` 502–511 se repiten con pedidos originales (los IDs originales llegan hasta 21350). | `Pedidos` (conteo distinto) queda inflado/mezclado. La app usa `max + 1`, así que no vuelve a pasar. |
-| 4 | Datos de prueba: `quantity = 10000` (pedido 509), `bbq_ckn_l_test`, tipos `efefe` / `sssss`, `gbg-hgj`, `pureba_jai`. | Distorsionan totales. La app limita la cantidad a 50. |
-| 5 | `carne_m` tiene tamaño `S` y el precio guardado como texto `"14.99"`. | Cambiar tipo a decimal en Power Query. |
+| 4 | Datos de prueba: `quantity = 10000` (pedido 509), `bbq_ckn_l_test`, tipos `efefe` / `sssss`, `gbg-hgj`, `pureba_jai`. | ✅ Limpiado el 06/11/2026 (respaldo en `respaldo/`, no se sube al repo). La app limita la cantidad a 50. |
+| 5 | `carne_m` tiene tamaño `S` y el precio guardado como texto `"14.99"`. | ✅ Precio corregido a número 14,99. |
 | 6 | `bbq_ckn` no tiene nombre ni categoría en `Dim_pizza_types`. | Sale en blanco en los gráficos; la app lo muestra como “Bbq Ckn” en la categoría “Otras”. |
