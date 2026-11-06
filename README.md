@@ -77,7 +77,8 @@ Primero sube la carpeta a un repositorio de GitHub (el `.gitignore` ya excluye `
 **Despliegue actual:** https://pizzeria-ventas.onrender.com (Render, sitio estático conectado como *Public Git Repository* a `santiago270903/pizzeria-ventas`).
 - Root Directory `frontend/`, Build `npm install && npm run build`, Publish `dist`, variable `VITE_API_URL`.
 - Redirects/Rewrites: `/` → `/index.html` y `/*` → `/index.html` (acción **Rewrite**); sin ellas la raíz da 404.
-- Al estar conectado como repositorio público **no se redespliega solo**: después de `git push`, en Render usa **Manual Deploy → Deploy latest commit**. Para auto-deploy, dale acceso al repo a la app de Render en GitHub y reconecta el servicio.
+- Auto-Deploy: requiere que la app de Render en GitHub tenga acceso al repo (github.com/settings/installations → Render → Configure → Repository access). Si no, después de `git push` usa **Manual Deploy → Deploy latest commit**.
+- Si un deploy falla con *"Exited with status 1"*, revisa que **Build Command** no haya quedado vacío (al editar la fuente en Render se puede borrar).
 
 **Opción A · Render** (sitio estático gratis)
 1. [dashboard.render.com](https://dashboard.render.com) → **New → Blueprint** → elige el repo (usa `render.yaml`).
