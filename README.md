@@ -97,6 +97,23 @@ Primero sube la carpeta a un repositorio de GitHub (el `.gitignore` ya excluye `
 
 No hace falta SQL en el medio: Power BI se conecta directo al Google Sheets.
 
+**Configuración actual (ya armada en `Tablero_Pizzeria.pbix`):** el Sheet está compartido como *Cualquier persona con el enlace: lector* y una consulta compartida `LibroPizza` lo descarga como Excel:
+
+```m
+let
+    Version = Text.From(Number.Round(Number.From(DateTimeZone.UtcNow()) * 86400)),
+    Archivo = Web.Contents(
+        "https://docs.google.com/spreadsheets/d/15tOKfeJbwet4Pn7kXLnsOXoy35Fu3muoQdaT5oCASDU/export",
+        [Query = [format = "xlsx", v = Version], Headers = [#"Cache-Control" = "no-cache"]]
+    ),
+    Origen = Excel.Workbook(Archivo, null, true),
+    Hojas = Table.SelectRows(Origen, each [Kind] = "Sheet")
+in
+    Hojas
+```
+
+El parámetro `v` cambia en cada actualización: sin él, Power BI Desktop reutiliza una copia en caché y no ve las ventas nuevas. Cada tabla (`Fac`, `Dim_Fecha`, `Dim_city`, `Dim_pizza`, `Dim_pizza_types`) toma su hoja de `LibroPizza`, promueve encabezados, quita filas vacías y asigna tipos (`price` se lee con cultura `en-US`). Si Power BI pide credenciales para `docs.google.com`, elige **Anónimo**.
+
 **Opción A · Conector de Google Sheets** (lo más simple en Power BI Desktop)
 1. **Obtener datos → Más… → Google Sheets** → pega la URL del Google Sheets → inicia sesión con tu cuenta de Google.
 2. Marca las 5 hojas → **Transformar datos**.
