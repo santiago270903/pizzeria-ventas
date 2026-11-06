@@ -10,7 +10,7 @@ import PizzaArt from './components/PizzaArt.jsx';
 const MAX_QTY = 50; // mismo límite que el Apps Script
 
 export default function App() {
-  const [catalog, setCatalog] = useState({ pizzas: [], cities: [] });
+  const [catalog, setCatalog] = useState({ pizzas: [], cities: [], channels: [] });
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
 
@@ -19,6 +19,7 @@ export default function App() {
 
   const [cart, setCart] = useState([]);
   const [cityId, setCityId] = useState('');
+  const [channelId, setChannelId] = useState('');
   const [date, setDate] = useState(todayISO());
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState('');
@@ -33,7 +34,8 @@ export default function App() {
     setLoading(true);
     setLoadError('');
     try {
-      setCatalog(await fetchCatalog());
+      const data = await fetchCatalog();
+      setCatalog({ pizzas: data.pizzas || [], cities: data.cities || [], channels: data.channels || [] });
     } catch (e) {
       setLoadError(e.message);
     } finally {
@@ -98,6 +100,7 @@ export default function App() {
     try {
       const res = await createOrder({
         cityId: Number(cityId),
+        channelId: Number(channelId),
         date,
         items: cart.map(({ pizzaId, quantity }) => ({ pizzaId, quantity })),
       });
@@ -120,6 +123,9 @@ export default function App() {
     cities: catalog.cities,
     cityId,
     setCityId,
+    channels: catalog.channels,
+    channelId,
+    setChannelId,
     date,
     setDate,
     onQty: setQty,
@@ -219,8 +225,8 @@ export default function App() {
       </div>
 
       <footer className="wrap footer muted small">
-        Modelo estrella: <code>Fac</code> → <code>Dim_Fecha</code>, <code>Dim_city</code>, <code>Dim_pizza</code> →{' '}
-        <code>Dim_pizza_types</code>
+        Modelo: <code>Fac</code> → <code>Dim_Fecha</code>, <code>Dim_sales_channel</code>, <code>Dim_city</code> →{' '}
+        <code>Dim_state</code>, <code>Dim_pizza</code> → <code>Dim_pizza_types</code>
       </footer>
 
       {/* Móvil: botón flotante + carrito como hoja inferior */}

@@ -188,6 +188,7 @@ code {
 .stepper button:hover { background: var(--line); }
 .stepper span { min-width: 26px; text-align: center; font-weight: 700; font-size: 14px; }
 .fields { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.fields .wide { grid-column: 1 / -1; }
 .fields label { display: flex; flex-direction: column; gap: 5px; font-size: 12px; font-weight: 700; color: var(--ink-2); text-transform: uppercase; letter-spacing: 0.04em; }
 .fields select, .fields input {
   padding: 10px 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg);

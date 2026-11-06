@@ -20,7 +20,8 @@ export default function SuccessModal({ result, onClose }) {
         <div className="receipt">
           <div><span>Pedido</span><strong>#{result.orderId}</strong></div>
           <div><span>Ciudad</span><strong>{result.city}</strong></div>
-          <div><span>Fecha</span><strong>{result.date}</strong></div>
+          <div><span>Canal</span><strong>{result.channel}</strong></div>
+          <div><span>Fecha</span><strong>{result.date} · {result.time}</strong></div>
           <div><span>Total</span><strong>{money(result.total)}</strong></div>
         </div>
 
@@ -38,11 +39,21 @@ export default function SuccessModal({ result, onClose }) {
               <td className="muted small">SK de Dim_city ({result.city})</td>
             </tr>
             <tr>
+              <td><code>sk_sales_channel_id</code></td>
+              <td>{result.skChannel}</td>
+              <td className="muted small">SK de Dim_sales_channel ({result.channel})</td>
+            </tr>
+            <tr>
               <td><code>sk_date</code></td>
               <td>{result.skDate}</td>
               <td className="muted small">
                 {result.skDateIsNew ? 'SK NUEVA creada en Dim_Fecha' : 'SK existente en Dim_Fecha'}
               </td>
+            </tr>
+            <tr>
+              <td><code>time</code></td>
+              <td>{result.time}</td>
+              <td className="muted small">hora del registro (Bogotá)</td>
             </tr>
             <tr>
               <td><code>filas en Fac</code></td>

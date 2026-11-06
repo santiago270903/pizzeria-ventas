@@ -22,7 +22,9 @@ export default function RecentOrders({ orders, loading, error, onRefresh, nameOf
             <div className="recent-top">
               <strong>#{o.orderId}</strong>
               <span className="muted small">
-                {o.date || `sk_date ${o.skDate || '—'}`} · {o.city}
+                {o.date || `sk_date ${o.skDate || '—'}`}
+                {o.time ? ` ${o.time.slice(0, 5)}` : ''} · {o.city}
+                {o.channel && o.channel !== 'Sin dato' ? ` · ${o.channel}` : ''}
               </span>
             </div>
             <p className="small">

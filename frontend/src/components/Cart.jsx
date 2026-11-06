@@ -6,6 +6,9 @@ export default function Cart({
   cities,
   cityId,
   setCityId,
+  channels,
+  channelId,
+  setChannelId,
   date,
   setDate,
   onQty,
@@ -17,7 +20,8 @@ export default function Cart({
 }) {
   const total = items.reduce((s, it) => s + it.price * it.quantity, 0);
   const count = items.reduce((s, it) => s + it.quantity, 0);
-  const canSend = items.length > 0 && cityId && date && !sending;
+  const canSend = items.length > 0 && cityId && channelId && date && !sending;
+  const missing = [!cityId && 'la ciudad', !channelId && 'el canal de venta'].filter(Boolean).join(' y ');
 
   return (
     <aside className="cart" aria-label="Pedido actual">
@@ -67,12 +71,23 @@ export default function Cart({
             <option value="">Selecciona…</option>
             {cities.map((c) => (
               <option key={c.id} value={c.id}>
-                {c.name}
+                {c.state ? `${c.name} (${c.state})` : c.name}
               </option>
             ))}
           </select>
         </label>
         <label>
+          Canal de venta
+          <select value={channelId} onChange={(e) => setChannelId(e.target.value)}>
+            <option value="">Selecciona…</option>
+            {channels.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="wide">
           Fecha de la venta
           <input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
         </label>
@@ -88,7 +103,7 @@ export default function Cart({
       <button className="btn primary block" disabled={!canSend} onClick={onSubmit}>
         {sending ? 'Guardando en Google Sheets…' : 'Registrar venta'}
       </button>
-      {!cityId && items.length > 0 && <p className="hint">Elige la ciudad para poder registrar.</p>}
+      {missing && items.length > 0 && <p className="hint">Elige {missing} para poder registrar.</p>}
     </aside>
   );
 }
