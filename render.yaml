@@ -1,0 +1,17 @@
+# Blueprint de Render: sitio estático (gratis) con el frontend React.
+# En Render: New > Blueprint > conecta el repositorio de GitHub.
+# Luego pon la variable VITE_API_URL con la URL /exec de Apps Script y vuelve a desplegar.
+services:
+  - type: web
+    name: pizzeria-ventas
+    runtime: static
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist
+    envVars:
+      - key: VITE_API_URL
+        sync: false
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html

@@ -1,0 +1,11 @@
+# Configuración de Netlify (alternativa a Render).
+# La variable VITE_API_URL se define en: Site configuration > Environment variables.
+[build]
+  base = "frontend"
+  command = "npm run build"
+  publish = "dist"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
